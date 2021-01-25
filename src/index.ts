@@ -41,6 +41,7 @@ const main = async () => {
         sameSite: 'lax', //csrf
         secure: __prod__ // only in https, doesnt work in dev if set to true
       },
+      saveUninitialized: false,
       secret: 'asgasfsfdsfsadcfsdafcsa', //need this as env variable
       resave: false,
     })
