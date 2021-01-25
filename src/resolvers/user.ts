@@ -38,7 +38,7 @@ export class UserResolver {
         return {
           errors: [{
             field: 'username',
-            message: "Username isn't log enough, must be greater than two characters in length"
+            message: "Username isn't long enough, must be greater than two characters in length"
           }]
         }
       }
@@ -46,7 +46,7 @@ export class UserResolver {
         return {
           errors: [{
             field: 'password',
-            message: "Password isn't log enough, must be greater than three characters in length"
+            message: "Password isn't long enough, must be greater than three characters in length"
           }]
         }
       }
@@ -57,8 +57,16 @@ export class UserResolver {
       })
       try {
         await em.persistAndFlush(user)
-      } catch (error) {
-        console.log("ERROR", error)
+      } catch (err) {
+        //duplicate username
+        if (err.code === '23505') {
+          return {
+            errors: [{
+              field: 'username',
+              message: 'This username already exists'
+            }]
+          }
+        }
       }
       return {user}
     }
