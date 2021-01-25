@@ -15,6 +15,7 @@ import { UserResolver } from './resolvers/user'
 import redis from 'redis'
 import session from 'express-session'
 import connectRedis from 'connect-redis'
+import { MyContext } from './types'
 
 
 const main = async () => {
@@ -38,7 +39,7 @@ const main = async () => {
         maxAge: 1000 * 60 * 60 * 24 * 365 * 10,// 10years
         httpOnly: true,
         sameSite: 'lax', //csrf
-        secure: __prod__ // only in htttps, doesnt work in dev
+        secure: __prod__ // only in https, doesnt work in dev if set to true
       },
       secret: 'asgasfsfdsfsadcfsdafcsa', //need this as env variable
       resave: false,
@@ -48,9 +49,9 @@ const main = async () => {
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
       resolvers: [HelloResolver, PostResolver, UserResolver],
-      validate: true
+      validate: false
     }),
-    context: () => ({ em: orm.em })
+    context: ({req, res}): MyContext => ({ em: orm.em, req, res })
   })
 
   apolloServer.applyMiddleware({ app })
