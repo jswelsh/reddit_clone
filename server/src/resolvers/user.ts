@@ -2,6 +2,8 @@ import { User } from "../entities/User"
 import { MyContext } from "../types"
 import argon2 from 'argon2'
 import { Arg, Ctx, Field, InputType, Mutation, ObjectType, Query, Resolver } from "type-graphql"
+import { EntityManager } from '@mikro-orm/postgresql'
+import { COOKIE_NAME } from "../constants"
 
 @InputType()
 class UsernamePasswordInput {
@@ -62,15 +64,28 @@ export class UserResolver {
         }
       }
       const hashedPassword = await argon2.hash(options.password)
+      let user
+/*    //use this when using mikro-orm
       const user = em.create(User, {
         username: options.username,
         password: hashedPassword
-      })
+      }) */
       try {
-        await em.persistAndFlush(user)
+        const result  = await (em as EntityManager)
+          .createQueryBuilder(User)
+          .getKnexQuery()
+          .insert({
+            username: options.username,
+            password: hashedPassword,
+            created_at: new Date(),
+            updated_at: new Date()
+          })
+          .returning('*')
+        user = result[0]
+        // await em.persistAndFlush( user)//used with mikro-orm
       } catch (err) {
         //duplicate username
-        if (err.code === '23505' /* || err.details.include('already exists') */) {
+        if ( err.code === '23505' /* err.details.include('already exists') */) {
           return {
             errors: [{
               field: 'username',
@@ -113,5 +128,20 @@ export class UserResolver {
     //keep them logged in
     req.session.userId = user.id
     return {user}
+  }
+
+  @Mutation(() => Boolean)
+  logout(@Ctx() { req, res }: MyContext){
+    return new Promise(resolve =>
+      req.session.destroy( err => {
+        res.clearCookie(COOKIE_NAME)//maybe move below if, only clear if session is destroyed???
+        if(err) {
+          console.log(err)
+          resolve(false)
+          return
+        }
+        resolve(true)
+      })
+    )
   }
 }
