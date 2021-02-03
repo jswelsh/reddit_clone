@@ -20,7 +20,9 @@ import { MyContext } from './types'
 import cors from 'cors'
 
 const main = async () => {
+  // sendEmail('bob@bob.com', 'hello there')
   const orm = await MikroORM.init(microConfig)
+  // await orm.em.nativeDelete(User, {}) //wipes all users from db
   await orm.getMigrator().up()
 
   const RedisStore = connectRedis(session)
