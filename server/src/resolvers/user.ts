@@ -27,6 +27,53 @@ class UserResponse{
 
 @Resolver()
 export class UserResolver {
+
+  @Mutation(() => UserResponse) 
+  async changePassword(
+    @Arg('token') token: string,
+    @Arg('newPassword') newPassword: string,
+    @Ctx() { redis, em, req }: MyContext
+  ):Promise<UserResponse> {
+    if (newPassword.length <= 3) {//this needs to be abstracted out
+      return { errors: [
+        {
+          field: 'newPassword',
+          message: "Password isn't long enough, must be greater than three characters in length"
+        }
+      ]}
+    }
+    const key = FORGET_PASSWORD_PREFIX + token
+    const userId = await redis.get(key)
+    if (!userId) {
+      return {errors: [
+        {
+          field: 'token',
+          message: "Token invalid or expired, request a new one through the forgot password link"
+        }
+      ]}
+    }
+
+    const user = await em.findOne(User, { id: parseInt(userId)})
+
+    if (!user) {
+      return {errors: [
+        {
+          field: 'token',
+          message: "User no longer exists"
+        }
+      ]}
+    }
+
+    user.password = await argon2.hash(newPassword)
+    await em.persistAndFlush(user)
+    await redis.del(key) //delete the key so it cant be used again
+
+    //log user in
+    req.session.userId = user.id
+
+    return { user }
+  }
+
   @Mutation(() => Boolean)
   async forgotPassword(
     @Arg('email') email: string,
@@ -44,7 +91,6 @@ export class UserResolver {
       'ex',
       1000 * 60 * 60 * 24
     ) //one day to reset using this token
-console.log(email, token)
     await sendEmail(
       email,
       `<a href="http://localhost:3000/change-password/${token}">reset password</a>`

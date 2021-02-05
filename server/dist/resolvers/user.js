@@ -60,6 +60,42 @@ UserResponse = __decorate([
     type_graphql_1.ObjectType()
 ], UserResponse);
 let UserResolver = class UserResolver {
+    changePassword(token, newPassword, { redis, em, req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (newPassword.length <= 3) {
+                return { errors: [
+                        {
+                            field: 'newPassword',
+                            message: "Password isn't long enough, must be greater than three characters in length"
+                        }
+                    ] };
+            }
+            const key = constants_1.FORGET_PASSWORD_PREFIX + token;
+            const userId = yield redis.get(key);
+            if (!userId) {
+                return { errors: [
+                        {
+                            field: 'token',
+                            message: "Token invalid or expired, request a new one through the forgot password link"
+                        }
+                    ] };
+            }
+            const user = yield em.findOne(User_1.User, { id: parseInt(userId) });
+            if (!user) {
+                return { errors: [
+                        {
+                            field: 'token',
+                            message: "User no longer exists"
+                        }
+                    ] };
+            }
+            user.password = yield argon2_1.default.hash(newPassword);
+            yield em.persistAndFlush(user);
+            yield redis.del(key);
+            req.session.userId = user.id;
+            return { user };
+        });
+    }
     forgotPassword(email, { em, redis }) {
         return __awaiter(this, void 0, void 0, function* () {
             const user = yield em.findOne(User_1.User, { email });
@@ -68,7 +104,6 @@ let UserResolver = class UserResolver {
             }
             const token = uuid_1.v4();
             yield redis.set(constants_1.FORGET_PASSWORD_PREFIX + token, user.id, 'ex', 1000 * 60 * 60 * 24);
-            console.log(email, token);
             yield sendEmail_1.sendEmail(email, `<a href="http://localhost:3000/change-password/${token}">reset password</a>`);
             return true;
         });
@@ -155,6 +190,15 @@ let UserResolver = class UserResolver {
         }));
     }
 };
+__decorate([
+    type_graphql_1.Mutation(() => UserResponse),
+    __param(0, type_graphql_1.Arg('token')),
+    __param(1, type_graphql_1.Arg('newPassword')),
+    __param(2, type_graphql_1.Ctx()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Object]),
+    __metadata("design:returntype", Promise)
+], UserResolver.prototype, "changePassword", null);
 __decorate([
     type_graphql_1.Mutation(() => Boolean),
     __param(0, type_graphql_1.Arg('email')),
