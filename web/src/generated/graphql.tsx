@@ -133,13 +133,13 @@ export type RegularUserResponseFragment = (
   )> }
 );
 
-export type ChangeOasswordMutationVariables = Exact<{
+export type ChangePasswordMutationVariables = Exact<{
   token: Scalars['String'];
   newPassword: Scalars['String'];
 }>;
 
 
-export type ChangeOasswordMutation = (
+export type ChangePasswordMutation = (
   { __typename?: 'Mutation' }
   & { changePassword: (
     { __typename?: 'UserResponse' }
@@ -227,16 +227,16 @@ export const RegularUserResponseFragmentDoc = gql`
 }
     ${RegularErrorFragmentDoc}
 ${RegularUserFragmentDoc}`;
-export const ChangeOasswordDocument = gql`
-    mutation ChangeOassword($token: String!, $newPassword: String!) {
+export const ChangePasswordDocument = gql`
+    mutation ChangePassword($token: String!, $newPassword: String!) {
   changePassword(token: $token, newPassword: $newPassword) {
     ...RegularUserResponse
   }
 }
     ${RegularUserResponseFragmentDoc}`;
 
-export function useChangeOasswordMutation() {
-  return Urql.useMutation<ChangeOasswordMutation, ChangeOasswordMutationVariables>(ChangeOasswordDocument);
+export function useChangePasswordMutation() {
+  return Urql.useMutation<ChangePasswordMutation, ChangePasswordMutationVariables>(ChangePasswordDocument);
 };
 export const LoginDocument = gql`
     mutation Login($usernameOrEmail: String!, $password: String!) {
