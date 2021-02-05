@@ -12,21 +12,22 @@ import { PostResolver } from './resolvers/post'
 import { UserResolver } from './resolvers/user'
 
 
-import redis from 'redis'
+import Redis from 'ioredis'
 import session from 'express-session'
 import connectRedis from 'connect-redis'
 import { MyContext } from './types'
 
 import cors from 'cors'
+import { sendEmail } from './utils/sendEmail'
 
 const main = async () => {
-  // sendEmail('bob@bob.com', 'hello there')
+  sendEmail('bob@bob.com', 'hello there')
   const orm = await MikroORM.init(microConfig)
   // await orm.em.nativeDelete(User, {}) //wipes all users from db
   await orm.getMigrator().up()
 
   const RedisStore = connectRedis(session)
-  const redisClient = redis.createClient()
+  const redis = new Redis()
 
   const app = express()
   app.use(
@@ -39,7 +40,7 @@ const main = async () => {
     session({
       name: COOKIE_NAME,
       store: new RedisStore({
-        client: redisClient,
+        client: redis,
         // disableTTL: true, //may not need
         disableTouch: true
       }),
@@ -60,7 +61,7 @@ const main = async () => {
       resolvers: [HelloResolver, PostResolver, UserResolver],
       validate: false
     }),
-    context: ({req, res}): MyContext => ({ em: orm.em, req, res })
+    context: ({req, res}): MyContext => ({ em: orm.em, req, res, redis })
   })
 
   apolloServer.applyMiddleware({

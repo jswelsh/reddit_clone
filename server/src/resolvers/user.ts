@@ -3,10 +3,11 @@ import { MyContext } from "../types"
 import argon2 from 'argon2'
 import { Arg, Ctx, Field, Mutation, ObjectType, Query, Resolver } from "type-graphql"
 import { EntityManager } from '@mikro-orm/postgresql'
-import { COOKIE_NAME } from "../constants"
+import { COOKIE_NAME, FORGET_PASSWORD_PREFIX } from "../constants"
 import { UsernamePasswordInput } from "./UsernamePasswordInput"
 import { validateRegister } from "../utils/validateRegister"
 import { sendEmail } from "../utils/sendEmail"
+import {v4} from 'uuid'
 
 @ObjectType()
 class FieldError {
@@ -29,17 +30,24 @@ export class UserResolver {
   @Mutation(() => Boolean)
   async forgotPassword(
     @Arg('email') email: string,
-    @Ctx() {em}: MyContext
+    @Ctx() {em, redis}: MyContext
   ) {
     const user = await em.findOne(User, {email})
     if(!user) {
       //email doesnt exist
     return true
     }
-    const tolken = '1232131dsfsdaj23crk3k3'
+    const token = v4(); //create a token
+    await redis.set(
+      FORGET_PASSWORD_PREFIX + token,
+      user.id,
+      'ex',
+      1000 * 60 * 60 * 24
+    ) //one day to reset using this token
+console.log(email, token)
     await sendEmail(
       email,
-      `<a href="http://localhost:3000/change-password/${tolken}">reset password</a>`
+      `<a href="http://localhost:3000/change-password/${token}">reset password</a>`
     )
     return true
   }
