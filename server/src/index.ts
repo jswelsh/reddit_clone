@@ -1,8 +1,6 @@
 import 'reflect-metadata'
-import { MikroORM } from '@mikro-orm/core'
+
 import { COOKIE_NAME, __prod__ } from './constants'
-// import { Post } from './entities/Post' 
-import microConfig from './mikro-orm.config'
 import express from 'express'
 import { ApolloServer } from 'apollo-server-express'
 
@@ -18,18 +16,27 @@ import connectRedis from 'connect-redis'
 import { MyContext } from './types'
 
 import cors from 'cors'
-import { sendEmail } from './utils/sendEmail'
+import {createConnection} from 'typeorm'
+import { Post } from './entities/Post'
+import { User } from './entities/User'
 
 const main = async () => {
-  sendEmail('bob@bob.com', 'hello there')
-  const orm = await MikroORM.init(microConfig)
-  // await orm.em.nativeDelete(User, {}) //wipes all users from db
-  await orm.getMigrator().up()
-
-  const RedisStore = connectRedis(session)
-  const redis = new Redis()
+  const conn = await createConnection({
+    type: 'postgres',
+    database: 'lireddit2',
+    username: 'postgres',
+    password: 'postgres',
+    logging: true,
+    synchronize: true, //keep this in development
+    // synchronize: false, //keep this in development
+    entities: [Post, User]
+  })
+  //used to clear the db of posts
+  // await Post.delete({})
 
   const app = express()
+  const RedisStore = connectRedis(session)
+  const redis = new Redis()
   app.use(
     cors({
       origin:'http://localhost:3000',
@@ -61,7 +68,7 @@ const main = async () => {
       resolvers: [HelloResolver, PostResolver, UserResolver],
       validate: false
     }),
-    context: ({req, res}): MyContext => ({ em: orm.em, req, res, redis })
+    context: ({req, res}): MyContext => ({ req, res, redis })
   })
 
   apolloServer.applyMiddleware({
