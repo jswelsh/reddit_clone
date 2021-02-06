@@ -1,55 +1,60 @@
 import { Post } from "../entities/Post"
-import { MyContext } from "../types"
-import { Resolver, Query, Ctx, Arg, Int, Mutation } from "type-graphql"
+import { Resolver, Query, Arg, Mutation, InputType, Field, Ctx } from "type-graphql"
+import { MyContext } from "src/types"
+
+@InputType()
+class PostInput {
+  @Field()
+  title: string
+  @Field()
+  text: string
+}
 
 @Resolver()
 export class PostResolver {
   @Query(() => [Post])/* graphql type */
-  posts(@Ctx() {em}: MyContext): Promise<Post[]> {/* typescript type */
-    return em.find(Post, {})
+  posts(): Promise<Post[]> {/* typescript type */
+    return Post.find()
   }
 
   @Query(() => Post, {nullable: true})/* graphql type */
-  post(
-    @Arg('id', () => Int) id: number,
-    @Ctx() {em}: MyContext
-  ): Promise<Post | null> {/* typescript type */
-    return em.findOne(Post, { id })
+  post(@Arg('id') id: number): Promise<Post | undefined> {
+    return Post.findOne(id)
   }
 
   @Mutation(() => Post)/* graphql type */
   async createPost(
-    @Arg('title') title: string,
-    @Ctx() {em}: MyContext
-  ): Promise<Post> {/* typescript type */
-    const post = em.create(Post,{title})
-    await em.persistAndFlush(post)
-    return post
+    @Arg('input') input: PostInput,
+    @Ctx() {req}: MyContext
+    ): Promise<Post> {/* typescript type */
+      if (!req.session.userId){
+        throw new Error('not authenticated')
+      }
+    return Post.create({
+      ...input,
+      creatorId: req.session.userId
+      //dont need to include points as it defaults to zero
+    }).save()
   }
 
   @Mutation(() => Post, {nullable: true})/* graphql type */
   async updatePost(
     @Arg('id') id: number,
     @Arg('title', () => String, {nullable:true}) title: string,
-    @Ctx() {em}: MyContext
   ): Promise<Post | null> {/* typescript type */
-    const post = await em.findOne(Post, {id})
+    const post = await Post.findOne(id)
     if (!post) {
       return null
     }
     if (typeof title !== 'undefined'){
-      post.title = title
-      await em.persistAndFlush(post)
+      await Post.update({id}, {title})
     }
     return post
   }
 
   @Mutation(() => Boolean)/* graphql type */
-  async deletePost(
-    @Arg('id') id: number,
-    @Ctx() {em}: MyContext
-  ): Promise<boolean> {/* typescript type */
-    await em.nativeDelete(Post, { id })
+  async deletePost(@Arg('id') id: number,): Promise<boolean> {/* typescript type */
+    await Post.delete(id)
     return true
   }
 }
