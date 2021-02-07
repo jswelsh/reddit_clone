@@ -16,8 +16,6 @@ const errorExchange: Exchange = ({ forward }) => (ops$) => {
   )
 }
 
-
-
 const cursorPagination = (): Resolver => {
   return (_parent, fieldArgs, cache, info) => {
     const { parentKey: entityKey, fieldName } = info
@@ -71,7 +69,17 @@ export const createUrqlClient = (ssrExchange: any) => ({
         },
     updates: {
       Mutation: {
-        logout: (_result, args, cache, info) => {
+        createPost: (_result, _/* args */, cache, __ /* info */) => {
+          //invalidating all the posts arguments 
+          const allFields = cache.inspectFields('Query')
+          const fieldInfos = allFields.filter(
+            (info) => info.fieldName === 'posts'
+          )
+          fieldInfos.forEach((fi) => {
+            cache.invalidate('Query', 'posts', fi.arguments || {})
+          })
+        },
+        logout: (_result, _/* args */, cache, __/* info */) => {
           betterUpdateQuery<LogoutMutation, MeQuery>(
             cache,
             { query: MeDocument },
@@ -79,7 +87,7 @@ export const createUrqlClient = (ssrExchange: any) => ({
             () => ({ me: null})
           )
         },
-        login: (_result, args, cache, info) => {
+        login: (_result, _/* args */, cache, __/* info */) => {
           betterUpdateQuery<LoginMutation, MeQuery>(
             cache,
             { query: MeDocument },
@@ -100,7 +108,7 @@ export const createUrqlClient = (ssrExchange: any) => ({
             
           )
         },
-        register: (_result, args, cache, info) => {
+        register: (_result, _/* args */, cache, __/* info */) => {
           betterUpdateQuery<RegisterMutation, MeQuery>(
             cache,
             { query: MeDocument },
