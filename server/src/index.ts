@@ -21,6 +21,7 @@ import { Post } from './entities/Post'
 import { User } from './entities/User'
 
 import path from "path"
+import { Updoot } from './entities/Updoot'
 
 const main = async () => {
   const conn = await createConnection({
@@ -32,7 +33,7 @@ const main = async () => {
     synchronize: true, //keep this in development
     // synchronize: false, //keep this in development
     migrations: [path.join(__dirname, './migrations/*')],
-    entities: [Post, User]
+    entities: [Post, User, Updoot]
   })
   await conn.runMigrations()
   //used to clear the db of posts

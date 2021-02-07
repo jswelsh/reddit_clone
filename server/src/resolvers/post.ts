@@ -27,6 +27,32 @@ export class PostResolver {
       return root.text.slice(0,50)
     }
 
+  @Mutation(() => Boolean)
+  @UseMiddleware(isAuth)
+  async vote(
+    @Arg('postId', () => Int) postId: number,
+    @Arg('value', () => Int) value: number,
+    @Ctx() {req}: MyContext
+  ) {
+    const isUpdoot = value !== -1
+    const realValue = isUpdoot ? 1 : -1
+    const { userId } = req.session
+
+    await getConnection().query(`
+    START TRANSACTION;
+
+    insert into updoot ("userId", "postId", value)
+    values (${userId},${postId},${realValue});
+
+    update post
+    set points = points + ${realValue}
+    where id = ${postId};
+
+    COMMIT;
+    `)
+
+    return true
+  }
   @Query(() => PaginatedPosts)/* graphql type */
   async posts(
     @Arg("limit", () => Int) limit: number,
@@ -71,7 +97,7 @@ export class PostResolver {
       })
     } */
     // const posts = await qb.getMany()
-    console.log("posts:", posts)
+    // console.log("posts:", posts)
     return {
       posts: posts.slice(0, realLimit),
       hasMore: posts.length === realLimitPlusOne
@@ -93,7 +119,7 @@ export class PostResolver {
     return Post.create({
       ...input,
       creatorId: req.session.userId
-      //dont need to include points as it defaults to zero
+      //don't need to include points as it defaults to zero
     }).save()
   }
 
