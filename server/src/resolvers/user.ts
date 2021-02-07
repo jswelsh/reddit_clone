@@ -92,7 +92,7 @@ export class UserResolver {
   ) {
     const user = await User.findOne({ where: { email } })
     if(!user) {
-      //email doesnt exist
+      //email doesn't exist
     return true
     }
     const token = v4(); //create a token
