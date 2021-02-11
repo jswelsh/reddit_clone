@@ -1,27 +1,21 @@
-import { withUrqlClient } from "next-urql"
-import NextLink from "next/link"
-import React, { useState } from "react"
-import { Layout } from "../components/Layout"
-import { Box, Button, Flex, Heading, IconButton, Link, Stack, Text } from '@chakra-ui/react';
-import { useDeletePostMutation, useMeQuery, usePostsQuery } from "../generated/graphql"
-import { createUrqlClient } from "../utils/createUrqlClient"
-import {  DeleteIcon, EditIcon } from "@chakra-ui/icons";
+import { Box, Button, Flex, Heading, Link, Stack, Text } from '@chakra-ui/react';
+import { withUrqlClient } from "next-urql";
+import NextLink from "next/link";
+import React, { useState } from "react";
 import { DootSection } from "../components/DootSection";
+import { EditDeletePostButtons } from "../components/EditDeletePostButtons";
+import { Layout } from "../components/Layout";
+import { useMeQuery, usePostsQuery } from "../generated/graphql";
+import { createUrqlClient } from "../utils/createUrqlClient";
 
 const Index = () =>{
   const [variables,setVariables] = useState({
     limit: 15,
     cursor: null as null | string
   })
-  const [{data: meData}] = useMeQuery()
   const [{data}] = usePostsQuery({
     variables
   })
-
-  const [,deletePost] = useDeletePostMutation()
-  // const [,editPost] = useEditPostMutation()
-
-
   if(!data){
     return <div> uh oh, there are no posts. This maybe and us problem.</div>
   }
@@ -44,29 +38,11 @@ return (
               <Text>posted by {p.creator.username}</Text>
               <Flex>
                 <Text flex={1} mt={4}>{p.textSnippet}</Text>
-                {meData?.me?.id !== p.creator.id ? null : (
-                <Box ml="auto">
-                  <NextLink
-                    href='/post/edit/[id]'
-                    as={`/post/edit/${p.id}`}>
-                    <IconButton
-                      mr={4}
-                      icon={<EditIcon/>}
-                      aria-label="edit"
-                      name="edit"
-                    />
-                  </NextLink>
-                  <IconButton
-                    icon={<DeleteIcon/>}
-                    aria-label="delete"
-                    name="delete"
-                    // colorScheme='red'
-                    onClick={()=>{
-                      deletePost({ id: p.id})
-                    }}
-                    // isLoading={isLoading==='downdoot'}
-                  />
-                </Box>)}
+                  <Box ml='auto'>
+                    <EditDeletePostButtons
+                      id={p.id}
+                      creatorId={p.creator.id}/>
+                  </Box>
               </Flex>
             </Box>
           </Flex>

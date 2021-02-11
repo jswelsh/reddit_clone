@@ -1,4 +1,4 @@
-import { cacheExchange, Resolver } from '@urql/exchange-graphcache';
+import { cacheExchange, Resolver, Cache } from '@urql/exchange-graphcache';
 import Router from 'next/router';
 import { dedupExchange, Exchange, fetchExchange, stringifyVariables } from "urql";
 import { pipe, tap } from "wonka"
@@ -54,11 +54,22 @@ const cursorPagination = (): Resolver => {
   }
 }
 
+const invalidateAllPosts = (cache: Cache) => {
+  //invalidating all the posts arguments 
+  const allFields = cache.inspectFields('Query')
+  const fieldInfos = allFields.filter(
+    (info) => info.fieldName === 'posts'
+  )
+  fieldInfos.forEach((fi) => {
+    cache.invalidate('Query', 'posts', fi.arguments || {})
+  })
+}
+
 export const createUrqlClient = (ssrExchange: any, ctx:any) => {
 //adding cookies to server side renderer pages
   let cookie = ''
 if(isServer()) {
-  cookie = ctx.req.headers.cookie
+  cookie = ctx?.req?.headers?.cookie
 }
 return {
   url: 'http://localhost:4000/graphql',
@@ -81,7 +92,7 @@ return {
         },
     updates: {
       Mutation: {
-        deletePost: (_result, args, cache, _/* info */) => {
+        deletePost: (_result, args, cache, _) => {
           cache.invalidate({__typename: 'Post', id: (args as DeletePostMutationVariables).id})
         },
         vote: (_result, args, cache, __ /* info */) => {
@@ -110,17 +121,10 @@ return {
             );
           }
         },
-        createPost: (_result, _/* args */, cache, __ /* info */) => {
-          //invalidating all the posts arguments 
-          const allFields = cache.inspectFields('Query')
-          const fieldInfos = allFields.filter(
-            (info) => info.fieldName === 'posts'
-          )
-          fieldInfos.forEach((fi) => {
-            cache.invalidate('Query', 'posts', fi.arguments || {})
-          })
+        createPost: (_result, _, cache, __) => {
+          invalidateAllPosts(cache)
         },
-        logout: (_result, _/* args */, cache, __/* info */) => {
+        logout: (_result, _, cache, __) => {
           betterUpdateQuery<LogoutMutation, MeQuery>(
             cache,
             { query: MeDocument },
@@ -128,7 +132,7 @@ return {
             () => ({ me: null})
           )
         },
-        login: (_result, _/* args */, cache, __/* info */) => {
+        login: (_result, _, cache, __) => {
           betterUpdateQuery<LoginMutation, MeQuery>(
             cache,
             { query: MeDocument },
@@ -148,8 +152,9 @@ return {
             )
             
           )
+          invalidateAllPosts(cache)
         },
-        register: (_result, _/* args */, cache, __/* info */) => {
+        register: (_result, _, cache, __) => {
           betterUpdateQuery<RegisterMutation, MeQuery>(
             cache,
             { query: MeDocument },
