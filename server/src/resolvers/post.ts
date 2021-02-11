@@ -163,7 +163,7 @@ export class PostResolver {
   async updatePost(
     @Arg('id',() => Int) id: number,
     @Arg('title') title: string,
-    @Arg('text') text: string
+    @Arg('text') text: string,
     @Ctx() {req}: MyContext
     ): Promise<Post | null> {/* typescript type */
     const result = await getConnection()
